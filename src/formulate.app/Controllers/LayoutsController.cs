@@ -4,19 +4,19 @@
     // Namespaces.
     using Helpers;
     using Layouts;
+    using Layouts.Kinds.Basic;
     using Models.Requests;
     using Persistence;
-    using Resolvers;
     using System;
     using System.Linq;
     using System.Web.Http;
     using Umbraco.Core;
     using Umbraco.Core.Logging;
-    using Umbraco.Web;
     using Umbraco.Web.Editors;
     using Umbraco.Web.Mvc;
     using Umbraco.Web.WebApi.Filters;
     using CoreConstants = Umbraco.Core.Constants;
+    using LayoutBasicConstants = formulate.app.Constants.Layouts.LayoutBasic;
     using LayoutConstants = formulate.app.Constants.Trees.Layouts;
 
 
@@ -43,6 +43,7 @@
         #region Properties
 
         private ILayoutPersistence Persistence { get; set; }
+        private IFormPersistence FormPersistence { get; set; }
         private IEntityPersistence Entities { get; set; }
 
         #endregion
@@ -53,21 +54,12 @@
         /// <summary>
         /// Default constructor.
         /// </summary>
-        public LayoutsController()
-            : this(UmbracoContext.Current)
+        public LayoutsController(ILayoutPersistence layoutPersistence, IFormPersistence formPersistence,
+            IEntityPersistence entityPersistence)
         {
-        }
-
-
-        /// <summary>
-        /// Primary constructor.
-        /// </summary>
-        /// <param name="context">Umbraco context.</param>
-        public LayoutsController(UmbracoContext context)
-            : base(context)
-        {
-            Persistence = LayoutPersistence.Current.Manager;
-            Entities = EntityPersistence.Current.Manager;
+            Persistence = layoutPersistence;
+            FormPersistence = formPersistence;
+            Entities = entityPersistence;
         }
 
         #endregion
@@ -115,6 +107,7 @@
 
 
                 // Create layout.
+                var serializedData = JsonHelper.Serialize(request.Data);
                 var layout = new Layout()
                 {
                     KindId = kindId,
@@ -122,8 +115,46 @@
                     Path = path,
                     Name = request.LayoutName,
                     Alias = request.LayoutAlias,
-                    Data = JsonHelper.Serialize(request.Data)
+                    Data = serializedData
                 };
+
+
+                // Automatically populate the layout based on the form?
+                var isBasic = GuidHelper.GetGuid(request.KindId) == GuidHelper.GetGuid(LayoutBasicConstants.Id);
+                var config = isBasic
+                    ? new LayoutBasic().DeserializeConfiguration(serializedData) as LayoutBasicConfiguration
+                    : null;
+                var shouldAutopopulate = (config?.Autopopulate).GetValueOrDefault(false);
+                var hasFormId = (config?.FormId.HasValue).GetValueOrDefault(false);
+                var form = hasFormId
+                    ? FormPersistence.Retrieve(config.FormId.Value)
+                    : null;
+                if (isBasic && shouldAutopopulate && form != null)
+                {
+                    var autoLayoutData = JsonHelper.Serialize(new
+                    {
+                        rows = new[]
+                        {
+                            new
+                            {
+                                cells = new []
+                                {
+                                    new
+                                    {
+                                        columnSpan = 12,
+                                        fields = form.Fields.Select(x => new
+                                        {
+                                            id = GuidHelper.GetString(x.Id)
+                                        })
+                                    }
+                                }
+                            }
+                        },
+                        formId = GuidHelper.GetString(form.Id),
+                        autopopulate = true
+                    });
+                    layout.Data = autoLayoutData;
+                }
 
 
                 // Persist layout.
@@ -149,7 +180,7 @@
             {
 
                 // Error.
-                LogHelper.Error<LayoutsController>(PersistLayoutError, ex);
+                Logger.Error<LayoutsController>(ex, PersistLayoutError);
                 result = new
                 {
                     Success = false,
@@ -220,7 +251,7 @@
             {
 
                 // Error.
-                LogHelper.Error<LayoutsController>(GetLayoutInfoError, ex);
+                Logger.Error<LayoutsController>(ex, GetLayoutInfoError);
                 result = new
                 {
                     Success = false,
@@ -277,7 +308,7 @@
             {
 
                 // Error.
-                LogHelper.Error<LayoutsController>(DeleteLayoutError, ex);
+                Logger.Error<LayoutsController>(ex, DeleteLayoutError);
                 result = new
                 {
                     Success = false,
@@ -333,7 +364,7 @@
             {
 
                 // Error.
-                LogHelper.Error<LayoutsController>(GetKindsError, ex);
+                Logger.Error<LayoutsController>(ex, GetKindsError);
                 result = new
                 {
                     Success = false,
@@ -410,7 +441,7 @@
             {
 
                 // Error.
-                LogHelper.Error<LayoutsController>(MoveLayoutError, ex);
+                Logger.Error<LayoutsController>(ex, MoveLayoutError);
                 result = new
                 {
                     Success = false,

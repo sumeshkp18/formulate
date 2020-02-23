@@ -17,8 +17,8 @@ function directive(formulateDirectives) {
 
 // Controller.
 function controller($scope, $routeParams, $route, formulateTrees,
-    formulateConfiguredForms, $location, formulateTemplates, dialogService,
-    formulateLayouts, formulateLocalization) {
+    formulateConfiguredForms, $location, formulateTemplates, editorService,
+    formulateLayouts) {
 
     // Variables.
     var id = $routeParams.id;
@@ -29,7 +29,7 @@ function controller($scope, $routeParams, $route, formulateTrees,
         formulateTrees: formulateTrees,
         formulateConfiguredForms: formulateConfiguredForms,
         formulateTemplates: formulateTemplates,
-        dialogService: dialogService,
+        editorService: editorService,
         formulateLayouts: formulateLayouts,
         $scope: $scope,
         $route: $route,
@@ -39,15 +39,7 @@ function controller($scope, $routeParams, $route, formulateTrees,
     // Set scope variables.
     $scope.isNew = isNew;
     $scope.info = {
-        conFormName: null,
-        tabs: [
-            {
-                id: 20,
-                active: true,
-                label: "Configured Form",
-                alias: "configuredForm"
-            }
-        ]
+        conFormName: null
     };
     $scope.parentId = null;
     $scope.template = {
@@ -60,9 +52,6 @@ function controller($scope, $routeParams, $route, formulateTrees,
     if (hasParent) {
         $scope.parentId = parentId;
     }
-
-    // Tabs need to be translated.
-    formulateLocalization.localizeTabs($scope.info.tabs);
 
     // Set scope functions.
     $scope.save = getSaveConfiguredForm(services);
@@ -232,18 +221,26 @@ function getCanSave(services) {
 
 // Returns the function that allows the user to pick a form.
 function getPickLayout(services) {
-    var dialogService = services.dialogService;
+    var editorService = services.editorService;
     var $scope = services.$scope;
-    return function() {
-        dialogService.open({
-            template: "../App_Plugins/formulate/dialogs/pickLayout.html",
-            show: true,
-            callback: function(data) {
+    return function () {
+
+        var layouts = $scope.layoutId ? [$scope.layoutId] : [];
+
+        editorService.open({
+            layouts: layouts,
+            view: "../App_Plugins/formulate/dialogs/pickLayout.html",
+            close: function() {
+                editorService.close();
+            },
+            submit: function(data) {
 
                 // If no layout was chosen, unchoose layout.
                 if (!data.length) {
                     $scope.layoutId = null;
                     $scope.layoutName = null;
+                    editorService.close();
+
                     return;
                 }
 
@@ -254,6 +251,7 @@ function getPickLayout(services) {
                 // Refresh layout information.
                 refreshLayoutInfo(layoutId, services);
 
+                editorService.close();
             }
         });
     };

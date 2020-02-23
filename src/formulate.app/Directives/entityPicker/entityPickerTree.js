@@ -2,11 +2,11 @@
 var app = angular.module("umbraco");
 
 // Associate directive/controller.
-app.directive("formulateEntityPickerTree", entityPickerDirective);
-app.controller("formulate.entityPickerTree", entityPickerController);
+app.directive("formulateEntityPickerTree", entityPickerTreeDirective);
+app.controller("formulate.entityPickerTree", entityPickerTreeController);
 
 // Directive.
-function entityPickerDirective(formulateDirectives, formulateRecursion) {
+function entityPickerTreeDirective(formulateDirectives, formulateRecursion) {
     return {
         restrict: "E",
         replace: true,
@@ -21,14 +21,14 @@ function entityPickerDirective(formulateDirectives, formulateRecursion) {
             maxCount: "=",
             wrongKindError: "=?"
         },
-        compile: function(element) {
+        compile: function (element) {
             return formulateRecursion.getCompiler(element);
         }
     };
 }
 
 // Controller.
-function entityPickerController($scope, formulateEntities, notificationsService, localizationService) {
+function entityPickerTreeController($scope, formulateEntities, notificationsService, localizationService) {
 
     // Variables.
     var services = {
@@ -40,6 +40,7 @@ function entityPickerController($scope, formulateEntities, notificationsService,
     // Set scope functions.
     $scope.toggleChildren = getToggleChildren(services);
     $scope.toggleNode = getToggleNode(services);
+    $scope.isSelected = isSelected(services);
 
     // Translations.
     localizationService.localize("formulate-errors_Node Selection Invalid").then(function (value) {
@@ -48,33 +49,30 @@ function entityPickerController($scope, formulateEntities, notificationsService,
     localizationService.localize("formulate-headers_Selection Failed").then(function (value) {
         $scope.selectionFailedHeader = value;
     });
-
 }
 
 // Gets the function that toggles selected nodes.
 function getToggleNode(services) {
     var $scope = services.$scope;
     var notificationsService = services.notificationsService;
-    return function(node) {
+    return function (node) {
         var allowedKinds = $scope.entityKinds || [],
             allowAny = allowedKinds.length === 0;
         if (allowAny || allowedKinds.indexOf(node.kind) >= 0) {
-            node.selected = !node.selected;
+            node.selected = !$scope.isSelected(node);
             if (node.selected) {
-
                 // Select node.
-                $scope.selection.push(node);
+                $scope.selection.push(node.id);
 
                 // If max count is exceeded, deselect another node.
                 if ($scope.maxCount && $scope.selection.length > $scope.maxCount) {
-                    var oldNode = $scope.selection.splice(0, 1)[0];
-                    oldNode.selected = false;
+                    $scope.selection.shift();
                 }
 
             } else {
 
                 // Deselect node.
-                var index = $scope.selection.indexOf(node);
+                var index = $scope.selection.indexOf(node.id);
                 if (index >= 0) {
                     $scope.selection.splice(index, 1);
                 }
@@ -97,7 +95,7 @@ function getToggleChildren(services) {
     var formulateEntities = services.formulateEntities;
 
     // Return function.
-    return function(node) {
+    return function (node) {
 
         // Variables.
         var childCount = (node.children || []).length;
@@ -107,7 +105,7 @@ function getToggleChildren(services) {
 
         // If just expanded and has unloaded children, load the children.
         if (node.expanded && node.hasChildren && childCount === 0) {
-            formulateEntities.getEntityChildren(node.id).then(function(result) {
+            formulateEntities.getEntityChildren(node.id).then(function (result) {
                 node.children = result.children.map(getViewModel);
             });
         }
@@ -125,7 +123,15 @@ function getViewModel(item) {
         kind: item.kind,
         children: item.children || [],
         hasChildren: item.hasChildren,
-        expanded: false,
-        selected: false
+        expanded: false
     };
+}
+
+// is the node already selected
+function isSelected(services) {
+    var $scope = services.$scope;
+
+    return function (item) {
+        return $scope.selection.indexOf(item.id) > -1;
+    }
 }

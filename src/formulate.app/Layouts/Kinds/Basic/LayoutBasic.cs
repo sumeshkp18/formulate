@@ -37,7 +37,7 @@
         {
             get
             {
-                return LocalizationHelper.GetLayoutName(Constants.Name);
+                return Constants.Name; //LocalizationHelper.GetLayoutName(Constants.Name);
             }
         }
 
@@ -80,6 +80,21 @@
             {
                 Rows = rows
             };
+
+
+            // Get the autopopulate value.
+            if (propertySet.Contains("autopopulate"))
+            {
+                var autopopulate = dynamicConfig.autopopulate.Value as bool?;
+                layout.Autopopulate = autopopulate.GetValueOrDefault();
+            }
+
+
+            // Get the form ID.
+            if (propertySet.Contains("formId"))
+            {
+                layout.FormId = GuidHelper.GetGuid(dynamicConfig.formId.Value as string);
+            }
 
 
             // Process each row?

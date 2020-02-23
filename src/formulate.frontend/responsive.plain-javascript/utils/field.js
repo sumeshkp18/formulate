@@ -89,6 +89,11 @@ Field.initializeField = function (fieldRenderer, fieldData, fieldValidators, opt
         fieldElement.name = options.name;
     }
 
+    // Add the catagory to the field.
+    if (fieldData.category) {
+        fieldElement.setAttribute("data-category", fieldData.category);
+    }
+
     // Set value?
     if (options.hasOwnProperty("value")) {
         fieldElement.value = options.value;
@@ -148,7 +153,7 @@ Field.initializeField = function (fieldRenderer, fieldData, fieldValidators, opt
                 labelElement.appendChild(fieldElement);
             }
         } else {
-            if (options.fieldBeforeLabelText) {
+            if (options.fieldBeforeLabelText || window.labelAfterTextInput) {
                 wrapperElement.insertBefore(fieldElement, wrapperElement.childNodes[0]);
             } else {
                 wrapperElement.appendChild(fieldElement);

@@ -4,6 +4,7 @@
     // Namespaces.
     using core.Types;
     using DataInterfaces;
+    using ExtensionMethods;
     using Helpers;
     using Newtonsoft.Json.Linq;
     using Suppliers;
@@ -40,7 +41,7 @@
         {
             get
             {
-                return LocalizationHelper.GetDataValueName(Constants.Name);
+                return Constants.Name;// LocalizationHelper.GetDataValueName();
             }
         }
 
@@ -97,7 +98,7 @@
             {
                 var strSupplier = dynamicConfig.supplier.Value as string;
                 var supplierType = supplierTypes
-                    .FirstOrDefault(x => x.AssemblyQualifiedName == strSupplier);
+                    .FirstOrDefault(x => x.ShortAssemblyQualifiedName() == strSupplier);
                 var supplier = default(ISupplyValueAndLabelCollection);
                 if (supplierType != null)
                 {

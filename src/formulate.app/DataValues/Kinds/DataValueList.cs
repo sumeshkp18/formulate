@@ -9,6 +9,9 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+
+    using Umbraco.Core.Services.Implement;
+
     using Constants = Constants.DataValues.DataValueList;
 
 
@@ -17,6 +20,11 @@
     /// </summary>
     public class DataValueList : IDataValueKind, IGetStringCollection, IGetValueAndLabelCollection
     {
+        public DataValueList(ILocalizationHelper localizationHelper)
+        {
+            LocalizationHelper = localizationHelper;
+        }
+
 
         #region Properties
 
@@ -54,6 +62,8 @@
                 return Constants.Directive;
             }
         }
+
+        private ILocalizationHelper LocalizationHelper { get; set; }
 
         #endregion
 

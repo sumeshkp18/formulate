@@ -18,6 +18,7 @@ function entityPickerDirective(formulateDirectives) {
             maxCount: "=",
             includeRoot: "=",
             selection: "=",
+            previouslySelectedIds: "=?",
             wrongKindError: "=?"//TODO: Is the question mark correct?
         }
     };
@@ -26,14 +27,18 @@ function entityPickerDirective(formulateDirectives) {
 // Controller.
 function entityPickerController($scope, formulateEntities) {
 
-    // Set scope variables.
-    $scope.selectedNodes = [];
+    // Push any previously selected IDs into the current selection
+    var ids = $scope.previouslySelectedIds || [];
+
+    for (var i = 0; i < ids.length; i++) {
+        $scope.selection.push(ids[i]);
+    }
 
     // Include the root or skip to the children?
     if ($scope.includeRoot) {
 
         // Get root.
-        formulateEntities.getEntity($scope.rootId).then(function(result) {
+        formulateEntities.getEntity($scope.rootId).then(function (result) {
             $scope.rootNodes = [
                 getViewModel(result)
             ];
@@ -42,21 +47,11 @@ function entityPickerController($scope, formulateEntities) {
     } else {
 
         // Get children of root.
-        formulateEntities.getEntityChildren($scope.rootId).then(function(result) {
+        formulateEntities.getEntityChildren($scope.rootId).then(function (result) {
             $scope.rootNodes = result.children.map(getViewModel);
         });
 
     }
-
-    // Watch selected nodes and update selection.
-    $scope.$watchCollection("selectedNodes", function(newValue) {
-        $scope.selection.splice(0, $scope.selection.length);
-        for (var i = 0; i < newValue.length; i++) {
-            var id = newValue[i].id;
-            $scope.selection.push(id);
-        }
-    });
-
 }
 
 // Gets the view model from a node.
@@ -68,7 +63,6 @@ function getViewModel(item) {
         kind: item.kind,
         children: item.children || [],
         hasChildren: item.hasChildren,
-        expanded: false,
-        selected: false
+        expanded: false
     };
 }

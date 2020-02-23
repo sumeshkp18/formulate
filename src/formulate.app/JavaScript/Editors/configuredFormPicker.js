@@ -2,13 +2,13 @@
 app.controller("formulate.editors.configuredFormPicker", controller);
 
 // Controller.
-function controller($scope, formulateConfiguredForms, dialogService) {
+function controller($scope, formulateConfiguredForms, editorService) {
 
     // Variables.
     var services = {
         $scope: $scope,
         formulateConfiguredForms: formulateConfiguredForms,
-        dialogService: dialogService
+        editorService: editorService
     };
 
     // Scope functions.
@@ -22,7 +22,7 @@ function controller($scope, formulateConfiguredForms, dialogService) {
 // Initializes the scope variables.
 function initialize(services) {
     var $scope = services.$scope;
-    if (!$scope.model.value) {
+    if (!$scope.model.value || !$scope.model.value.id) {
         $scope.model.value = {
             id: null
         };
@@ -35,17 +35,23 @@ function initialize(services) {
 
 // Returns the function that opens a dialog to allow the user to pick a form.
 function getPickForm(services) {
-    var dialogService = services.dialogService;
+    var editorService = services.editorService;
     var $scope = services.$scope;
-    return function() {
-        dialogService.open({
-            template: "../App_Plugins/formulate/dialogs/pickConfiguredForm.html",
-            show: true,
-            callback: function(data) {
+    return function () {
+        var configureForms  = $scope.model.value.id ? [$scope.model.value.id] : [];
+
+        editorService.open({
+            configureForms: configureForms,
+            view: "../App_Plugins/formulate/dialogs/pickConfiguredForm.html",
+            close: function () {
+                editorService.close();
+            },
+            submit: function (data) {
 
                 // If no form was chosen, deselect form.
                 if (!data.length) {
                     $scope.model.value.id = null;
+                    editorService.close();
                     return;
                 }
 
@@ -55,7 +61,7 @@ function getPickForm(services) {
 
                 // Update form info.
                 refreshForm(conFormId, services);
-
+                editorService.close();
             }
         });
     };

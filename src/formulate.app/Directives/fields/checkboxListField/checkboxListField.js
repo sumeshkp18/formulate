@@ -20,12 +20,12 @@ function directive(formulateDirectives) {
 }
 
 // Controller.
-function controller($scope, dialogService, formulateDataValues) {
+function controller($scope, editorService, formulateDataValues) {
 
     // Variables.
     var services = {
         $scope: $scope,
-        dialogService: dialogService,
+        editorService: editorService,
         formulateDataValues: formulateDataValues
     };
 
@@ -40,24 +40,29 @@ function controller($scope, dialogService, formulateDataValues) {
 // Allows the user to pick their data value.
 function getPickDataValue(services) {
     var $scope = services.$scope;
-    var dialogService = services.dialogService;
-    return function() {
-        dialogService.open({
-            template: "../App_Plugins/formulate/dialogs/pickDataValue.html",
-            show: true,
-            callback: function(data) {
+    var editorService = services.editorService;
+    return function () {
+        var dataValues = $scope.configuration.dataValue ? [$scope.configuration.dataValue] : [];
 
+        editorService.open({
+            view: "../App_Plugins/formulate/dialogs/pickDataValue.html",
+            dataValues: dataValues,
+            close: function() {
+                editorService.close();
+            },
+            submit: function(data) {
                 // If no data value was picked, set data value to null.
                 if (!data.length) {
                     $scope.dataValue = null;
                     $scope.configuration.dataValue = null;
+                    editorService.close();
                     return;
                 }
 
                 // Store data value to configuration.
                 $scope.configuration.dataValue = data[0];
                 refreshDataValue(services);
-
+                editorService.close();
             }
         });
     };

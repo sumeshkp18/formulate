@@ -13,6 +13,7 @@
 @using formulate.core.Extensions
 @using formulate.core.Types
 @using System.Web.Configuration
+@using FieldDefinition = formulate.core.Types.FieldDefinition
 @model formulate.core.Models.FormViewModel
 @{
 
@@ -138,7 +139,6 @@
         }
         else if (x.FieldType == typeof(RecaptchaField))
         {
-            var config = x.Configuration as RichTextConfiguration;
             return new
             {
                 key = WebConfigurationManager.AppSettings["Formulate:RecaptchaSiteKey"]
@@ -176,7 +176,9 @@
         // The initial value comes from the query string based on the field alias.
         initialValue = string.IsNullOrWhiteSpace(x.Alias)
             ? null
-            : Request.QueryString[x.Alias]
+            : Request.QueryString[x.Alias],
+        // The user selected category of the field
+        category = x.Category
     }).ToArray();
 
 

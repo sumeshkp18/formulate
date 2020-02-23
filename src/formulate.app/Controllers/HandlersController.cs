@@ -2,14 +2,15 @@
 {
 
     // Namespaces.
-    using Forms;
     using Forms.Handlers.SendData;
     using Helpers;
     using System;
     using System.Linq;
     using System.Web.Http;
+
+    using formulate.app.CollectionBuilders;
+
     using Umbraco.Core.Logging;
-    using Umbraco.Web;
     using Umbraco.Web.Editors;
     using Umbraco.Web.Mvc;
     using Umbraco.Web.WebApi.Filters;
@@ -30,6 +31,9 @@
         private const string GetResultHandlersError = @"An error occurred while attempting to get the result handler functions.";
 
         #endregion
+        
+        private FormHandlerTypeCollection FormHandlerTypeCollection { get; set; }
+
 
 
         #region Constructors
@@ -37,19 +41,9 @@
         /// <summary>
         /// Default constructor.
         /// </summary>
-        public HandlersController()
-            : this(UmbracoContext.Current)
+        public HandlersController(FormHandlerTypeCollection formHandlerTypeCollection)
         {
-        }
-
-
-        /// <summary>
-        /// Primary constructor.
-        /// </summary>
-        /// <param name="context">Umbraco context.</param>
-        public HandlersController(UmbracoContext context)
-            : base(context)
-        {
+            FormHandlerTypeCollection = formHandlerTypeCollection;
         }
 
         #endregion
@@ -75,17 +69,11 @@
             // Catch all errors.
             try
             {
-
-                // Variables.
-                var instances = ReflectionHelper
-                    .InstantiateInterfaceImplementations<IFormHandlerType>();
-
-
                 // Return results.
                 result = new
                 {
                     Success = true,
-                    HandlerTypes = instances.Select(x => new
+                    HandlerTypes = FormHandlerTypeCollection.Select(x => new
                     {
                         Icon = x.Icon,
                         TypeLabel = x.TypeLabel,
@@ -99,7 +87,7 @@
             {
 
                 // Error.
-                LogHelper.Error<HandlersController>(GetHandlerTypesError, ex);
+                Logger.Error<HandlersController>(ex, GetHandlerTypesError);
                 result = new
                 {
                     Success = false,
@@ -156,7 +144,7 @@
             {
 
                 // Error.
-                LogHelper.Error<HandlersController>(GetResultHandlersError, ex);
+                Logger.Error<HandlersController>(ex, GetResultHandlersError);
                 result = new
                 {
                     Success = false,

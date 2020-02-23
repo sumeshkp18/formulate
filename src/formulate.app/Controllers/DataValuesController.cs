@@ -2,25 +2,34 @@
 {
 
     // Namespaces.
-    using core.Extensions;
-    using DataValues;
-    using DataValues.Suppliers;
-    using Helpers;
-    using Models.Requests;
-    using Persistence;
-    using Resolvers;
+
     using System;
     using System.Linq;
     using System.Web.Http;
+
+    using core.Extensions;
+
+    using DataValues;
+    using DataValues.Suppliers;
+
+    using ExtensionMethods;
+
+    using formulate.app.CollectionBuilders;
+
+    using Helpers;
+
+    using Models.Requests;
+
+    using Persistence;
+
     using Umbraco.Core;
     using Umbraco.Core.Logging;
-    using Umbraco.Web;
     using Umbraco.Web.Editors;
     using Umbraco.Web.Mvc;
     using Umbraco.Web.WebApi.Filters;
-    using CoreConstants = Umbraco.Core.Constants;
-    using DataValuesConstants = formulate.app.Constants.Trees.DataValues;
 
+    using CoreConstants = Umbraco.Core.Constants;
+    using DataValuesConstants = Constants.Trees.DataValues;
 
     /// <summary>
     /// Controller for Formulate data values.
@@ -47,6 +56,7 @@
 
         private IDataValuePersistence Persistence { get; set; }
         private IEntityPersistence Entities { get; set; }
+        private DataValueKindCollection DataValueKindCollection { get; set; }
 
         #endregion
 
@@ -54,23 +64,14 @@
         #region Constructors
 
         /// <summary>
-        /// Default constructor.
-        /// </summary>
-        public DataValuesController()
-            : this(UmbracoContext.Current)
-        {
-        }
-
-
-        /// <summary>
         /// Primary constructor.
         /// </summary>
         /// <param name="context">Umbraco context.</param>
-        public DataValuesController(UmbracoContext context)
-            : base(context)
+        public DataValuesController(IDataValuePersistence dataValuePersistence, IEntityPersistence entityPersistence, DataValueKindCollection dataValueKindCollection)
         {
-            Persistence = DataValuePersistence.Current.Manager;
-            Entities = EntityPersistence.Current.Manager;
+            Persistence = dataValuePersistence;
+            Entities = entityPersistence;
+            DataValueKindCollection = dataValueKindCollection;
         }
 
         #endregion
@@ -152,7 +153,7 @@
             {
 
                 // Error.
-                LogHelper.Error<DataValuesController>(PersistDataValueError, ex);
+                Logger.Error<DataValuesController>(ex, PersistDataValueError);
                 result = new
                 {
                     Success = false,
@@ -198,7 +199,7 @@
                 var fullPath = new[] { rootId }
                     .Concat(dataValue.Path.Select(x => GuidHelper.GetString(x)))
                     .ToArray();
-                var kinds = DataValueHelper.GetAllDataValueKinds();
+                var kinds = DataValueKindCollection;
                 var directive = kinds.Where(x => x.Id == dataValue.KindId)
                     .Select(x => x.Directive).FirstOrDefault();
 
@@ -221,8 +222,7 @@
             {
 
                 // Error.
-                LogHelper.Error<DataValuesController>(
-                    GetDataValueInfoError, ex);
+                Logger.Error<DataValuesController>(ex, GetDataValueInfoError);
                 result = new
                 {
                     Success = false,
@@ -267,7 +267,7 @@
                     .Select(x => GuidHelper.GetGuid(x));
                 var dataValues = ids.Select(x => Persistence.Retrieve(x))
                     .WithoutNulls();
-                var kinds = DataValueHelper.GetAllDataValueKinds();
+                var kinds = DataValueKindCollection;
                 var combined = dataValues.Join(kinds,
                     x => x.KindId,
                     y => y.Id,
@@ -301,8 +301,7 @@
             {
 
                 // Error.
-                LogHelper.Error<DataValuesController>(
-                    GetDataValueInfoError, ex);
+                Logger.Error<DataValuesController>(ex, GetDataValueInfoError);
                 result = new
                 {
                     Success = false,
@@ -359,7 +358,7 @@
             {
 
                 // Error.
-                LogHelper.Error<DataValuesController>(DeleteDataValueError, ex);
+                Logger.Error<DataValuesController>(ex, DeleteDataValueError);
                 result = new
                 {
                     Success = false,
@@ -395,7 +394,7 @@
             {
 
                 // Variables.
-                var kinds = DataValueHelper.GetAllDataValueKinds();
+                var kinds = DataValueKindCollection;
 
 
                 // Return results.
@@ -415,7 +414,7 @@
             {
 
                 // Error.
-                LogHelper.Error<DataValuesController>(GetKindsError, ex);
+                Logger.Error<DataValuesController>(ex, GetKindsError);
                 result = new
                 {
                     Success = false,
@@ -463,7 +462,7 @@
                     Kinds = suppliers.Select(x => new
                     {
                         Name = x.Name,
-                        ClassName = x.GetType().AssemblyQualifiedName
+                        ClassName = x.GetType().ShortAssemblyQualifiedName()
                     }).ToArray()
                 };
 
@@ -472,7 +471,7 @@
             {
 
                 // Error.
-                LogHelper.Error<DataValuesController>(GetSuppliersError, ex);
+                Logger.Error<DataValuesController>(ex, GetSuppliersError);
                 result = new
                 {
                     Success = false,
@@ -549,7 +548,7 @@
             {
 
                 // Error.
-                LogHelper.Error<DataValuesController>(MoveDataValueError, ex);
+                Logger.Error<DataValuesController>(ex, MoveDataValueError);
                 result = new
                 {
                     Success = false,

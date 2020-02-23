@@ -6,13 +6,11 @@
     using Helpers;
     using Models.Requests;
     using Persistence;
-    using Resolvers;
     using System;
     using System.Linq;
     using System.Web.Http;
     using Umbraco.Core;
     using Umbraco.Core.Logging;
-    using Umbraco.Web;
     using Umbraco.Web.Editors;
     using Umbraco.Web.Mvc;
     using Umbraco.Web.WebApi.Filters;
@@ -49,23 +47,13 @@
         #region Constructors
 
         /// <summary>
-        /// Default constructor.
-        /// </summary>
-        public ConfiguredFormsController()
-            : this(UmbracoContext.Current)
-        {
-        }
-
-
-        /// <summary>
         /// Primary constructor.
         /// </summary>
         /// <param name="context">Umbraco context.</param>
-        public ConfiguredFormsController(UmbracoContext context)
-            : base(context)
+        public ConfiguredFormsController(IConfiguredFormPersistence configuredFormPersistence, IEntityPersistence entityPersistence)
         {
-            Persistence = ConfiguredFormPersistence.Current.Manager;
-            Entities = EntityPersistence.Current.Manager;
+            Persistence = configuredFormPersistence;
+            Entities = entityPersistence;
         }
 
         #endregion
@@ -146,7 +134,7 @@
             {
 
                 // Error.
-                LogHelper.Error<ConfiguredFormsController>(PersistConFormError, ex);
+                Logger.Error<ConfiguredFormsController>(ex, PersistConFormError);
                 result = new
                 {
                     Success = false,
@@ -203,7 +191,7 @@
             {
 
                 // Error.
-                LogHelper.Error<ConfiguredFormsController>(DeleteConFormError, ex);
+                Logger.Error<ConfiguredFormsController>(ex, DeleteConFormError);
                 result = new
                 {
                     Success = false,

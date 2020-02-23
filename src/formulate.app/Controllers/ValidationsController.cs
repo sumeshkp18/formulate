@@ -6,7 +6,6 @@
     using Helpers;
     using Models.Requests;
     using Persistence;
-    using Resolvers;
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -53,23 +52,18 @@
         #region Constructors
 
         /// <summary>
-        /// Default constructor.
-        /// </summary>
-        public ValidationsController()
-            : this(UmbracoContext.Current)
-        {
-        }
-
-
-        /// <summary>
         /// Primary constructor.
         /// </summary>
-        /// <param name="context">Umbraco context.</param>
-        public ValidationsController(UmbracoContext context)
-            : base(context)
+        /// <param name="entityPersistence">
+        /// The entity Persistence.
+        /// </param>
+        /// <param name="validationPersistence">
+        /// The validation Persistence.
+        /// </param>
+        public ValidationsController(IEntityPersistence entityPersistence, IValidationPersistence validationPersistence)
         {
-            Persistence = ValidationPersistence.Current.Manager;
-            Entities = EntityPersistence.Current.Manager;
+            Persistence = validationPersistence;
+            Entities = entityPersistence;
         }
 
         #endregion
@@ -151,7 +145,7 @@
             {
 
                 // Error.
-                LogHelper.Error<ValidationsController>(PersistValidationError, ex);
+                Logger.Error<ValidationsController>(ex, PersistValidationError);
                 result = new
                 {
                     Success = false,
@@ -220,7 +214,7 @@
             {
 
                 // Error.
-                LogHelper.Error<ValidationsController>(GetValidationInfoError, ex);
+                Logger.Error<ValidationsController>(ex, GetValidationInfoError);
                 result = new
                 {
                     Success = false,
@@ -319,7 +313,7 @@
             {
 
                 // Error.
-                LogHelper.Error<ValidationsController>(GetValidationInfoError, ex);
+                Logger.Error<ValidationsController>(ex, GetValidationInfoError);
                 result = new
                 {
                     Success = false,
@@ -376,7 +370,7 @@
             {
 
                 // Error.
-                LogHelper.Error<ValidationsController>(DeleteValidationError, ex);
+                Logger.Error<ValidationsController>(ex, DeleteValidationError);
                 result = new
                 {
                     Success = false,
@@ -432,7 +426,7 @@
             {
 
                 // Error.
-                LogHelper.Error<ValidationsController>(GetKindsError, ex);
+                Logger.Error<ValidationsController>(ex, GetKindsError);
                 result = new
                 {
                     Success = false,
@@ -509,7 +503,7 @@
             {
 
                 // Error.
-                LogHelper.Error<ValidationsController>(MoveValidationError, ex);
+                Logger.Error<ValidationsController>(ex, MoveValidationError);
                 result = new
                 {
                     Success = false,

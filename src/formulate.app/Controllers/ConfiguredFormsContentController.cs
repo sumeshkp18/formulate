@@ -5,7 +5,6 @@
     using Helpers;
     using Models.Requests;
     using Persistence;
-    using Resolvers;
     using System;
     using System.Linq;
     using System.Web.Http;
@@ -44,24 +43,13 @@
 
 
         #region Constructors
-
-        /// <summary>
-        /// Default constructor.
-        /// </summary>
-        public ConfiguredFormsContentController()
-            : this(UmbracoContext.Current)
-        {
-        }
-
-
         /// <summary>
         /// Primary constructor.
         /// </summary>
         /// <param name="context">Umbraco context.</param>
-        public ConfiguredFormsContentController(UmbracoContext context)
-            : base(context)
+        public ConfiguredFormsContentController(IConfiguredFormPersistence configuredFormPersistence)
         {
-            Persistence = ConfiguredFormPersistence.Current.Manager;
+            Persistence = configuredFormPersistence;
         }
 
         #endregion
@@ -137,7 +125,7 @@
             {
 
                 // Error.
-                LogHelper.Error<ConfiguredFormsController>(GetConFormInfoError, ex);
+                Logger.Error<ConfiguredFormsController>(ex, GetConFormInfoError);
                 result = new
                 {
                     Success = false,

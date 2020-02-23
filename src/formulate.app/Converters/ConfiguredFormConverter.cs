@@ -4,10 +4,10 @@
     // Namespaces.
     using Helpers;
     using Persistence;
-    using Resolvers;
     using System;
     using Types;
     using Umbraco.Core;
+    using Umbraco.Core.Composing;
     using Umbraco.Core.Models.PublishedContent;
     using Umbraco.Core.PropertyEditors;
 
@@ -15,7 +15,7 @@
     /// <summary>
     /// Converts property values to ConfiguredFormInfo.
     /// </summary>
-    [PropertyValueType(typeof(ConfiguredFormInfo))]
+    //[PropertyValueType(typeof(ConfiguredFormInfo))]
     public class ConfiguredFormConverter : PropertyValueConverterBase
     {
 
@@ -33,7 +33,8 @@
         /// </summary>
         public ConfiguredFormConverter()
         {
-            ConfiguredForms = ConfiguredFormPersistence.Current.Manager;
+            //TODO: Work around using Current.
+            ConfiguredForms = Current.Factory.GetInstance<IConfiguredFormPersistence>();
         }
 
         #endregion
@@ -50,40 +51,21 @@
         /// <returns>
         /// True, if this can convert the property type; otherwise, false.
         /// </returns>
-        public override bool IsConverter(PublishedPropertyType propertyType)
+        public override bool IsConverter(IPublishedPropertyType propertyType)
         {
-            return "Formulate.ConfiguredFormPicker".InvariantEquals(propertyType.PropertyEditorAlias);
+            return "Formulate.ConfiguredFormPicker".InvariantEquals(propertyType.EditorAlias);
         }
 
 
-        /// <summary>
-        /// Converts the raw property data to ConfiguredFormInfo.
-        /// </summary>
-        /// <param name="propertyType">
-        /// The property type.
-        /// </param>
-        /// <param name="source">
-        /// The property data.
-        /// </param>
-        /// <param name="preview">
-        /// Is this preview data?
-        /// </param>
-        /// <returns>
-        /// The ConfiguredFormInfo.
-        /// </returns>
-        public override object ConvertDataToSource(PublishedPropertyType propertyType, object source,
-            bool preview)
+        public override object ConvertIntermediateToObject(IPublishedElement owner, IPublishedPropertyType propertyType, PropertyCacheLevel cacheLevel, object source, bool preview)
         {
-
             // Variables.
             var deserialized = default(dynamic);
-
 
             // Source is typically a string, but may already be deserialized (e.g.,
             // when used with Umbraco grid and LeBlender).
             if (source == null || source is string)
             {
-
                 // Source is a string, so deserialize it.
                 var strSource = source as string;
                 strSource = string.IsNullOrWhiteSpace(strSource)

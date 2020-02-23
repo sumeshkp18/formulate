@@ -5,7 +5,6 @@
     using Helpers;
     using Models.Requests;
     using Persistence;
-    using Resolvers;
     using System;
     using System.Linq;
     using System.Web.Http;
@@ -37,6 +36,7 @@
         #region Properties
 
         private IEntityPersistence Entities { get; set; }
+        private IEntityHelper EntityHelper { get; set; }
 
         #endregion
 
@@ -46,20 +46,10 @@
         /// <summary>
         /// Default constructor.
         /// </summary>
-        public EntitiesController()
-            : this(UmbracoContext.Current)
+        public EntitiesController(IEntityPersistence entityPersistence, IEntityHelper entityHelper)
         {
-        }
-
-
-        /// <summary>
-        /// Primary constructor.
-        /// </summary>
-        /// <param name="context">Umbraco context.</param>
-        public EntitiesController(UmbracoContext context)
-            : base(context)
-        {
-            Entities = EntityPersistence.Current.Manager;
+            Entities = entityPersistence;
+            EntityHelper = entityHelper;
         }
 
         #endregion
@@ -117,7 +107,7 @@
             {
 
                 // Error.
-                LogHelper.Error<EntitiesController>(GetEntityError, ex);
+                Logger.Error<EntitiesController>(ex, GetEntityError);
                 result = new
                 {
                     Success = false,

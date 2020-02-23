@@ -6,11 +6,11 @@
     using Helpers;
     using Newtonsoft.Json.Linq;
     using Persistence;
-    using Resolvers;
     using System;
     using System.Collections.Generic;
     using System.Linq;
 
+    using formulate.app.CollectionBuilders;
 
     /// <summary>
     /// A radio button list field type.
@@ -21,6 +21,7 @@
         #region Private Properties
 
         private IDataValuePersistence DataValues { get; set; }
+        private DataValueKindCollection DataValueKindCollection { get; set; }
 
         #endregion
 
@@ -58,9 +59,10 @@
         /// <summary>
         /// Default constructor.
         /// </summary>
-        public RadioButtonListField()
+        public RadioButtonListField(IDataValuePersistence dataValuePersistence, DataValueKindCollection dataValueKindCollection)
         {
-            DataValues = DataValuePersistence.Current.Manager;
+            DataValues = dataValuePersistence;
+            DataValueKindCollection = dataValueKindCollection;
         }
 
         #endregion
@@ -116,8 +118,7 @@
                 {
 
                     // Extract list items from the data value.
-                    var kinds = DataValueHelper.GetAllDataValueKinds();
-                    var kind = kinds.FirstOrDefault(x => x.Id == dataValue.KindId);
+                    var kind = DataValueKindCollection.FirstOrDefault(x => x.Id == dataValue.KindId);
                     var pairCollection = kind as IGetValueAndLabelCollection;
                     var stringCollection = kind as IGetStringCollection;
 

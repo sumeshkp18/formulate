@@ -8,12 +8,15 @@
     using System;
     using System.Linq;
     using System.Web.Http;
+
+    using formulate.app.CollectionBuilders;
+    using formulate.app.Persistence;
+
     using Umbraco.Core.Logging;
     using Umbraco.Web;
     using Umbraco.Web.Editors;
     using Umbraco.Web.Mvc;
     using Umbraco.Web.WebApi.Filters;
-    using ResolverConfig = Resolvers.Configuration;
 
 
     /// <summary>
@@ -39,13 +42,11 @@
         /// <summary>
         /// Configuration manager.
         /// </summary>
-        private IConfigurationManager Config
-        {
-            get
-            {
-                return ResolverConfig.Current.Manager;
-            }
-        }
+        private IConfigurationManager Config { get; set; }
+
+        private IDataValuePersistence DataValues { get; set; }
+
+        private FormFieldTypeCollection FormFieldTypeCollection { get; set; }
 
         #endregion
 
@@ -55,19 +56,11 @@
         /// <summary>
         /// Default constructor.
         /// </summary>
-        public FieldsController()
-            : this(UmbracoContext.Current)
+        public FieldsController(IConfigurationManager configurationManager, IDataValuePersistence dataValuePersistence, FormFieldTypeCollection formFieldTypeCollection)
         {
-        }
-
-
-        /// <summary>
-        /// Primary constructor.
-        /// </summary>
-        /// <param name="context">Umbraco context.</param>
-        public FieldsController(UmbracoContext context)
-            : base(context)
-        {
+            Config = configurationManager;
+            DataValues = dataValuePersistence;
+            FormFieldTypeCollection = formFieldTypeCollection;
         }
 
         #endregion
@@ -93,17 +86,11 @@
             // Catch all errors.
             try
             {
-
-                // Variables.
-                var instances = ReflectionHelper
-                    .InstantiateInterfaceImplementations<IFormFieldType>();
-
-
                 // Return results.
                 result = new
                 {
                     Success = true,
-                    FieldTypes = instances.Select(x => new
+                    FieldTypes = FormFieldTypeCollection.Select(x => new
                     {
                         Icon = x.Icon,
                         TypeLabel = x.TypeLabel,
@@ -119,19 +106,16 @@
             {
 
                 // Error.
-                LogHelper.Error<FieldsController>(GetFieldTypesError, ex);
+                Logger.Error<FieldsController>(ex, GetFieldTypesError);
                 result = new
                 {
                     Success = false,
                     Reason = UnhandledError
                 };
-
             }
-
 
             // Return result.
             return result;
-
         }
 
 
@@ -164,7 +148,7 @@
             {
 
                 // Error.
-                LogHelper.Error<FieldsController>(GetButtonKindsError, ex);
+                Logger.Error<FieldsController>(ex, GetButtonKindsError);
                 result = new
                 {
                     Success = false,
@@ -218,7 +202,7 @@
             {
 
                 // Error.
-                LogHelper.Error<FieldsController>(GetFieldCategoriesError, ex);
+                Logger.Error<FieldsController>(ex, GetFieldCategoriesError);
                 result = new
                 {
                     Success = false,

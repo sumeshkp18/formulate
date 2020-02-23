@@ -6,7 +6,6 @@
     using Helpers;
     using Models.Requests;
     using Persistence;
-    using Resolvers;
     using System;
     using System.Linq;
     using System.Web.Http;
@@ -44,6 +43,8 @@
         private IFolderPersistence Persistence { get; set; }
         private IEntityPersistence Entities { get; set; }
 
+        private IEntityHelper EntityHelper { get; set; }
+
         #endregion
 
 
@@ -52,21 +53,11 @@
         /// <summary>
         /// Default constructor.
         /// </summary>
-        public FoldersController()
-            : this(UmbracoContext.Current)
+        public FoldersController(IEntityHelper entityHelper, IEntityPersistence entityPersistence, IFolderPersistence folderPersistence)
         {
-        }
-
-
-        /// <summary>
-        /// Primary constructor.
-        /// </summary>
-        /// <param name="context">Umbraco context.</param>
-        public FoldersController(UmbracoContext context)
-            : base(context)
-        {
-            Persistence = FolderPersistence.Current.Manager;
-            Entities = EntityPersistence.Current.Manager;
+            Persistence = folderPersistence;
+            Entities = entityPersistence;
+            EntityHelper = entityHelper;
         }
 
         #endregion
@@ -121,7 +112,7 @@
             {
 
                 // Error.
-                LogHelper.Error<FoldersController>(GetFolderInfoError, ex);
+                Logger.Error<FoldersController>(ex, GetFolderInfoError);
                 result = new
                 {
                     Success = false,
@@ -199,7 +190,7 @@
             {
 
                 // Error.
-                LogHelper.Error<FoldersController>(PersistFolderError, ex);
+                Logger.Error<FoldersController>(ex, PersistFolderError);
                 result = new
                 {
                     Success = false,
@@ -305,7 +296,7 @@
             {
 
                 // Error.
-                LogHelper.Error<FoldersController>(MoveFolderError, ex);
+                Logger.Error<FoldersController>(ex, MoveFolderError);
                 result = new
                 {
                     Success = false,
@@ -370,7 +361,7 @@
             {
 
                 // Error.
-                LogHelper.Error<FoldersController>(DeleteFolderError, ex);
+                Logger.Error<FoldersController>(ex, DeleteFolderError);
                 result = new
                 {
                     Success = false,

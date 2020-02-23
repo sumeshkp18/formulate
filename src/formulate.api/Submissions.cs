@@ -4,20 +4,21 @@
     //  Namespaces.
     using app.Forms;
     using app.Persistence;
-    using app.Resolvers;
     using app.Validations;
     using core.Types;
     using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
+    using System.Threading.Tasks;
+
     using Umbraco.Core.Logging;
 
 
     /// <summary>
     /// Used for form submissions.
     /// </summary>
-    public static class Submissions
+    public class Submissions
     {
 
         #region Constants
@@ -60,27 +61,24 @@
         /// <summary>
         /// Form persistence.
         /// </summary>
-        private static IFormPersistence Forms
-        {
-            get
-            {
-                return FormPersistence.Current.Manager;
-            }
-        }
+        private IFormPersistence Forms { get; set; }
 
 
         /// <summary>
         /// Validation persistence.
         /// </summary>
-        private static IValidationPersistence Validations
-        {
-            get
-            {
-                return ValidationPersistence.Current.Manager;
-            }
-        }
+        private IValidationPersistence Validations { get; set; }
+
+        private ILogger Logger { get; set; }
 
         #endregion
+
+        public Submissions(IFormPersistence formPersistence, IValidationPersistence validationPersistence, ILogger logger)
+        {
+            Forms = formPersistence;
+            Validations = validationPersistence;
+            Logger = logger;
+        }
 
 
         #region Methods
@@ -109,7 +107,7 @@
         /// <returns>
         /// The result of the submission.
         /// </returns>
-        public static SubmissionResult SubmitForm(Guid formId,
+        public SubmissionResult SubmitForm(Guid formId,
             IEnumerable<FieldSubmission> data, IEnumerable<FileFieldSubmission> files,
             IEnumerable<PayloadSubmission> payload, SubmissionOptions options,
             FormRequestContext context)
@@ -139,7 +137,8 @@
                 UmbracoContext = context.UmbracoContext,
                 UmbracoHelper = context.UmbracoHelper,
                 SubmissionId = Guid.NewGuid(),
-                ExtraContext = new Dictionary<string, object>()
+                ExtraContext = new Dictionary<string, object>(),
+                SubmissionCancelled = false
             };
 
 
@@ -147,11 +146,22 @@
             Submitting?.Invoke(submissionContext);
 
 
+            // Fail the form submission if SubmissionCancelled is true.
+            if (submissionContext.SubmissionCancelled)
+            {
+                return new SubmissionResult()
+                {
+                    Success = false
+                };
+            }
+
+
             // Validate against native field validations.
             foreach (var field in form.Fields)
             {
                 var fieldId = field.Id;
-                var value = data.Where(x => x.FieldId == fieldId).SelectMany(x => x.FieldValues);
+                var value = data.Where(x => x.FieldId == fieldId)
+                    .SelectMany(x => x.FieldValues);
                 if (!field.IsValid(value))
                 {
                     return new SubmissionResult()
@@ -177,7 +187,9 @@
                 }).ToDictionary(x => x.Id, x => x.Values);
                 foreach (var field in form.Fields)
                 {
-                    var validations = field.Validations.Select(x => Validations.Retrieve(x)).ToList();
+                    var validations = field.Validations
+                        .Select(x => Validations.Retrieve(x))
+                        .ToList();
                     if (!validations.Any())
                     {
                         continue;
@@ -209,12 +221,17 @@
             }
 
 
+            // Get a fresh instance of each handler (this is to avoid any cross-threading issues
+            // with multiple threads sharing data).
+            var enabledHandlers = form.Handlers
+                .Where(x => x.Enabled)
+                .Select(x => x.GetFreshCopy())
+                .ToArray();
+
+
             // Prepare the form handlers.
             // This occurs on the current thread in case the handler needs information
             // only available in the current thread.
-            var enabledHandlers = form.Handlers
-                .Where(x => x.Enabled)
-                .ToArray();
             try
             {
                 foreach (var handler in enabledHandlers)
@@ -224,7 +241,8 @@
             }
             catch (Exception ex)
             {
-                LogHelper.Error<Submissions_Instance>(PreHandlerError, ex);
+                Logger.Error<Submissions_Instance>(ex, PreHandlerError);
+
                 return new SubmissionResult()
                 {
                     Success = false
@@ -233,30 +251,27 @@
 
 
             // Initiate form handlers on a new thread (they may take some time to complete).
-            var t = new Thread(() =>
+            var task = new Task(() =>
             {
-                try
+                foreach (var handler in enabledHandlers)
                 {
-                    foreach (var handler in enabledHandlers)
-                    {
-                        handler.HandleForm(submissionContext);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LogHelper.Error<Submissions_Instance>(HandlerError, ex);
+                    handler.HandleForm(submissionContext);
                 }
             });
-            t.IsBackground = true;
-            t.Start();
 
+            task.ContinueWith(FormHandlersExceptionHandler, TaskContinuationOptions.OnlyOnFaulted);
+            task.Start();
 
             // Return success.
             return new SubmissionResult()
             {
                 Success = true
             };
+        }
 
+        private void FormHandlersExceptionHandler(Task task)
+        {
+            Logger.Error<Submissions_Instance>(task.Exception, HandlerError);
         }
 
         #endregion

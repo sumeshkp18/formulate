@@ -25,13 +25,13 @@ function directive(formulateDirectives) {
 }
 
 // Controller.
-function controller($scope, formulateForms, dialogService, notificationsService) {
+function controller($scope, formulateForms, editorService, notificationsService) {
 
     // Variables.
     var services = {
         $scope: $scope,
         formulateForms: formulateForms,
-        dialogService: dialogService,
+        editorService: editorService,
         notificationsService: notificationsService
     };
 
@@ -221,19 +221,25 @@ function getAddRow(services) {
 
 // Returns the function that allows the user to pick a form.
 function getPickForm(services) {
-    var dialogService = services.dialogService;
+    var editorService = services.editorService;
     var $scope = services.$scope;
-    return function() {
-        dialogService.open({
-            template: "../App_Plugins/formulate/dialogs/pickForm.html",
-            show: true,
-            callback: function(data) {
+    return function () {
+        var forms = $scope.data.formId ? [$scope.data.formId] : [];
 
+        editorService.open({
+            forms: forms,
+            view: "../App_Plugins/formulate/dialogs/pickForm.html",
+            show: true,
+            close: function() {
+                editorService.close();
+            },
+            submit: function (data) {
                 // If no form was chosen, empty all fields.
                 if (!data.length) {
                     $scope.data.formId = null;
                     $scope.allFields = [];
                     replenishFields($scope);
+                    editorService.close();
                     return;
                 }
 
@@ -241,7 +247,7 @@ function getPickForm(services) {
                 var formId = data[0];
                 $scope.data.formId = formId;
                 refreshFields(formId, services);
-
+                editorService.close();
             }
         });
     };

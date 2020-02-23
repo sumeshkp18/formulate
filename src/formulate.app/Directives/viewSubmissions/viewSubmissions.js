@@ -15,12 +15,12 @@ function directive(formulateDirectives) {
 }
 
 // Controller.
-function controller(formulateSubmissions, dialogService, $scope, formulateForms, formulateVars) {
+function controller(formulateSubmissions, editorService, $scope, formulateForms, formulateVars) {
 
     // Variables.
     var injected = {
         $scope: $scope,
-        dialogService: dialogService,
+        editorService: editorService,
         formulateForms: formulateForms,
         formulateSubmissions: formulateSubmissions,
         formulateVars: formulateVars
@@ -42,15 +42,7 @@ function controller(formulateSubmissions, dialogService, $scope, formulateForms,
     $scope.currentPage = 0;
     $scope.pagerItems = [];
     $scope.info = {
-        header: getFormHeader(),
-        tabs: [
-            {
-                id: 6,
-                active: true,
-                label: "Submissions",
-                alias: "submissions"
-            }
-        ]
+        header: getFormHeader()
     };
 
 }
@@ -76,13 +68,18 @@ function getGetExportUrl(injected) {
 
 // Returns the function that allows the user to pick a form.
 function getPickForm(injected) {
-    var dialogService = injected.dialogService;
+    var editorService = injected.editorService;
     var $scope = injected.$scope;
-    return function() {
-        dialogService.open({
-            template: "../App_Plugins/formulate/dialogs/pickForm.html",
-            show: true,
-            callback: function(data) {
+    return function () {
+        var forms = $scope.formId ? [$scope.formId] : [];
+
+        editorService.open({
+            forms: forms,
+            view: "../App_Plugins/formulate/dialogs/pickForm.html",
+            close: function () {
+                editorService.close();
+            },
+            submit: function (data) {
 
                 // If no form was chosen, unset values.
                 if (!data.length) {
@@ -91,6 +88,8 @@ function getPickForm(injected) {
                     $scope.totalSubmissions = 0;
                     $scope.submissions = [];
                     $scope.currentPage = 0;
+
+                    editorService.close();
                     return;
                 }
 
@@ -101,6 +100,7 @@ function getPickForm(injected) {
                 refreshForm(formId, injected);
                 updateSubmissions(injected);
 
+                editorService.close();
             }
         });
     };
@@ -211,7 +211,7 @@ function adjustPagerItems(injected) {
     }
 
     // Add enough items to the pager.
-    while(pages.length < pagerItemCount) {
+    while (pages.length < pagerItemCount) {
         pages.push({
             pageNumber: 0,
             active: false

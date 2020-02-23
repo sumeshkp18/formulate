@@ -10,6 +10,12 @@
     using System.Collections.Generic;
     using System.Linq;
 
+    using formulate.app.CollectionBuilders;
+
+    using Umbraco.Core;
+    using Umbraco.Core.Composing;
+
+    using Current = Umbraco.Web.Composing.Current;
 
     /// <summary>
     /// Handles conversion of JSON to IFormField[].
@@ -22,6 +28,12 @@
     /// </remarks>
     public class FieldsJsonConverter : JsonConverter
     {
+        public FieldsJsonConverter()
+        {
+            // TODO: Find a way to resolve this without using Current.
+            // Get field types.
+            FieldTypes = Current.Factory.GetInstance<FormFieldTypeCollection>();
+        }
 
         #region Public Methods
 
@@ -57,7 +69,6 @@
             Type objectType, object existingValue,
             JsonSerializer serializer)
         {
-
             // Variables.
             var fields = new List<IFormField>();
             var jsonArray = JArray.Load(reader);
@@ -73,10 +84,16 @@
                 var typeId = Guid.Parse(strTypeId);
                 var instance = InstantiateFieldByTypeId(typeId);
 
-
                 // Populate the form field instance.
-                serializer.Populate(jsonObject.CreateReader(), instance);
-                fields.Add(instance);
+                if (instance != null)
+                {
+                    serializer.Populate(jsonObject.CreateReader(), instance);
+                    fields.Add(instance);
+                }
+                else
+                {
+                    //TODO: Add logging to indicate that field type is unknown.
+                }
 
             }
 
@@ -115,32 +132,18 @@
         /// </returns>
         private IFormField InstantiateFieldByTypeId(Guid typeId)
         {
+            var fieldType = FieldTypes?.FirstOrDefault(x => x.TypeId == typeId);
 
-            // Get field type.
-            var types = ReflectionHelper
-                .InstantiateInterfaceImplementations<IFormFieldType>();
-            var type = types.FirstOrDefault(x => x.TypeId == typeId);
-            if (type != null)
+            if (fieldType == null)
             {
-
-                // Create instance of form field.
-                var fieldType = type.GetType();
-                var genericType = typeof(FormField<>);
-                var fullType = genericType.MakeGenericType(fieldType);
-                var instance = Activator.CreateInstance(fullType);
-                var casted = instance as IFormField;
-                return casted;
-
+                return null;
             }
 
-
-            // Could not instantiate a form field.
-            return null;
-
+            return new FormField(fieldType);
         }
 
         #endregion
 
+        private FormFieldTypeCollection FieldTypes { get; set; }
     }
-
 }
